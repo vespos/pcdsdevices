@@ -773,6 +773,65 @@ class CCMEnergyWithVernier(CCMEnergy):
         return self.PseudoPosition(energy=energy)
 
 
+class CCMEnergyWithSelfSeed(CCMEnergy):
+    """
+    CCM energy motor with the self-seeding scheme.
+
+    Moves the alio to the requested energy, while also writing to the
+    BeamEnergyRequest PV so that ACR can set the self-seed energy accordingly.
+
+    The goal is to optimize the CCM energy around the self-seed energy. The
+    process is as follow:
+        1. Pass a setpoint energy to both the CCM and self-seeding.
+        2. Wait for self-seeding to stabilize.
+        3. Optimize the CCM throughput at the new energy.
+    There can be several implementations of the optimization step. Look at
+    the specific implementation methods for detailed information.
+    """
+    vernier = FCpt(BeamEnergyRequest, '{hutch}', kind='normal',
+                   doc='Requests ACR to move the Vernier.')
+
+    # IPMs intensities from the EventBuilder IOC. We need beam-synchronous
+    # IPM information, hence the use of the EventBuilder PV.
+    # see https://confluence.slac.stanford.edu/display/PCDS/Notes+on+the+Timetool+IOC
+    ipms = UCpt(EpicsSignalRO)
+
+    # These are duplicate warnings with main energy motor
+    _enable_warn_constants: bool = False
+    hutch: str
+
+    tab_component_names = True
+
+    def __init__(
+        self,
+        prefix: str,
+        ipms_prefix: str = None,
+        hutch: typing.Optional[str] = None,
+        ipm_idx: dict = {'upstream': 0, 'downstream': 1},
+        **kwargs
+    ):
+        # Put some effort into filling this automatically
+        # CCM exists only in two hutches
+        if hutch is not None:
+            self.hutch = hutch
+        elif 'XPP' in prefix:
+            self.hutch = 'XPP'
+        elif 'XCS' in prefix:
+            self.hutch = 'XCS'
+        else:
+            self.hutch = 'TST'
+
+        prefixes = {'ipms_prefix': ipms_prefix}
+        UCpt.collect_prefixes(self, prefixes)
+        super().__init__(prefix, **kwargs)
+
+        self.ipm_idx = ipm_idx
+
+    def move(*args, **kwargs):
+        super().move(*args, **kwargs)
+        return
+
+
 class CCMX(SyncAxis):
     """
     Combined motion of the CCM X motors.
@@ -806,7 +865,7 @@ class CCMX(SyncAxis):
         prefix: typing.Optional[str] = None,
         **kwargs
     ):
-        UCpt.collect_prefixes(self, kwargs)
+        UCpt.collect_prefixes(self, )
         prefix = prefix or self.unrelated_prefixes['down_prefix']
         super().__init__(prefix, **kwargs)
 
