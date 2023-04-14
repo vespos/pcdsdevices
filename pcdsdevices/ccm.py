@@ -820,7 +820,7 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         self,
         prefix: str,
         ipms_prefix: str = None,
-        ipm_idx: dict = {'downstream': 0, 'upstream': 1},
+        ipm_idx: dict = {'upstream': 0, 'downstream': 1},
         hutch: typing.Optional[str] = None,
         **kwargs
     ):
@@ -859,6 +859,30 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         stepsize,
         max_steps
     ):
+        """
+        Simple monotonic search for the CCM energy positon:
+        Noce CCM slightly under the setpoint and check if the downstream/upstream IPM
+        value is above a given threshold. If not, move the CCM energy up a bit and check
+        again.
+
+        Parameters
+        ----------
+        setpoint : float
+            Energy setpoint
+        offset: float
+            Energy offset. The initial CCM energy will be setpoint-offset.
+        n_average: int
+            Number of data points in the IPM average.
+        threshold_ratio: float
+            If mean(IPM downstream)/mean(IPM upstream)>threshold_ratio, the optimization
+            finishes.
+        stepsize: float
+            Energy increment after a failed check on the IPM ratio. Should be smaller
+            than the self-seed bandwidth for good results.
+        max_steps: int
+            If no good point is reached after max_step points, the optimization is
+            aborted.
+        """
         self.self_seed.move(setpoint)
         # move slightly below the setpoint
         super().move(setpoint-offset, wait=True)
@@ -882,24 +906,24 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         return np.asarray(intensities)
 
     def ipm_ratio(self, intensities):
-        """ Calculate the mean(upstrea)/mean(downstream) IPMs """
+        """ Calculate the mean(downstream)/mean(upstream) IPMs """
         ratio = np.average(intensities, axis=0)
-        ratio = ratio[self.ipm_idx['upstream']] / ratio[self.ipm_idx['downstream']]
+        ratio = ratio[self.ipm_idx['downstream']] / ratio[self.ipm_idx['upstream']]
         return ratio
 
     def setup_method_monotonic(self):
         print('Setting up monotonic search parameters.')
 
-        s = 'Offset (eV) (default: 5): '
+        s = 'Offset (eV) (default: TBD): '
         offset = float(input(s) or 5)
 
         s = 'Number of shots for the IPMs average (default: 50): '
         n = int(input(s) or 50)
 
-        s = 'IPM ratio threshold (default: ff): '
+        s = 'IPM ratio threshold (default: TBD): '
         ratio_th = float(input(s) or 2.5)
 
-        s = 'Energy increment (eV) (default: 0.5): '
+        s = 'Energy increment (eV) (default: TBD): '
         step_size = float(input(s) or 0.5)
 
         s = 'Maximum number of optimization steps (default: 10): '
