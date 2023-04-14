@@ -978,7 +978,7 @@ class CCMX(SyncAxis):
         prefix: typing.Optional[str] = None,
         **kwargs
     ):
-        UCpt.collect_prefixes(self, )
+        UCpt.collect_prefixes(self, kwargs)
         prefix = prefix or self.unrelated_prefixes['down_prefix']
         super().__init__(prefix, **kwargs)
 
