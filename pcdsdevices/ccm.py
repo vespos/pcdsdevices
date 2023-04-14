@@ -807,7 +807,7 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
 
     # IPMs intensities from the EventBuilder IOC. We need beam-synchronous IPM
     # information, hence the use of the EventBuilder PV.
-    # see https://confluence.slac.stanford.edu/display/PCDS/Notes+on+the+Timetool+IOC
+    # See https://confluence.slac.stanford.edu/display/PCDS/Notes+on+the+Timetool+IOC
     ipms = UCpt(EpicsSignalRO)
 
     # These are duplicate warnings with main energy motor
@@ -860,9 +860,9 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         max_steps
     ):
         """
-        Simple monotonic search for the CCM energy positon:
-        Noce CCM slightly under the setpoint and check if the downstream/upstream IPM
-        value is above a given threshold. If not, move the CCM energy up a bit and check
+        Simple monotonic search for the CCM energy position:
+        Move CCM slightly under the setpoint and check if the downstream/upstream IPM
+        average is above a given threshold. If not, move the CCM energy up a bit and check
         again.
 
         Parameters
