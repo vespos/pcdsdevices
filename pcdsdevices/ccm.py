@@ -787,12 +787,26 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         3. Optimize the CCM throughput at the new energy.
     There can be several implementations of the optimization step. Look at
     the specific implementation methods for detailed information.
-    """
-    vernier = FCpt(BeamEnergyRequest, '{hutch}', kind='normal',
-                   doc='Requests ACR to move the Vernier.')
 
-    # IPMs intensities from the EventBuilder IOC. We need beam-synchronous
-    # IPM information, hence the use of the EventBuilder PV.
+    Parameters
+    ----------
+    prefix : str
+        The PV prefix of the Alio motor, e.g. XPP:MON:MPZ:07A
+    ipms_prefix : str
+        The EventBuilder PV containing the IPMs information
+    ipm_idx : dict
+        Indices in the EventBuilder array PV that contains the upstream
+        and downstream IPM. Format: {'upstream': 0, 'downstream': 1}
+    hutch : str, optional
+        The hutch we're in. This informs us as to which vernier
+        PVs to write to. If omitted, we can guess this from the
+        prefix.
+    """
+    self_seed = FCpt(BeamEnergyRequest, '{hutch}', kind='normal',
+                     doc='Requests ACR to move the self-seed energy.')
+
+    # IPMs intensities from the EventBuilder IOC. We need beam-synchronous IPM
+    # information, hence the use of the EventBuilder PV.
     # see https://confluence.slac.stanford.edu/display/PCDS/Notes+on+the+Timetool+IOC
     ipms = UCpt(EpicsSignalRO)
 
@@ -806,8 +820,8 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         self,
         prefix: str,
         ipms_prefix: str = None,
+        ipm_idx: dict = {'downstream': 0, 'upstream': 1},
         hutch: typing.Optional[str] = None,
-        ipm_idx: dict = {'upstream': 0, 'downstream': 1},
         **kwargs
     ):
         # Put some effort into filling this automatically
@@ -827,8 +841,83 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
 
         self.ipm_idx = ipm_idx
 
-    def move(*args, **kwargs):
-        super().move(*args, **kwargs)
+        self.method = 'monotonic'
+        self.optimization_args = {
+            'energy_offset' : 5,
+            'n_average' : 50,
+            'ipm_ratio_threshold' : 1,
+            'energy_step_size' : 0.5,
+            'max_step' : 15
+        }
+
+    def monotonic_increase_search(
+        self,
+        setpoint,
+        offset,
+        n_average,
+        threshold_ratio,
+        stepsize,
+        max_steps
+    ):
+        self.self_seed.move(setpoint)
+        # move slightly below the setpoint
+        super().move(setpoint-offset, wait=True)
+        # wait for self-seed to settle
+        time.sleep(1)
+
+        for step in range(max_steps):
+            intensities = self.get_ipms_intensities(n_average)
+            ipm_ratio = self.ipm_ratio(intensities)
+            if ipm_ratio > self.ipm_ratio_threshold:
+                print('Optimization complete!\n')
+                break
+            super().mvr(stepsize, wait=True)
+        return
+
+    def get_ipms_intensities(self, nn, sleep=0.01):
+        intensities = []
+        for ii in range(nn):
+            intensities.append(self.ipms.get())
+            time.sleep(sleep)
+        return np.asarray(intensities)
+
+    def ipm_ratio(self, intensities):
+        """ Calculate the mean(upstrea)/mean(downstream) IPMs """
+        ratio = np.average(intensities, axis=0)
+        ratio = ratio[self.ipm_idx['upstream']] / ratio[self.ipm_idx['downstream']]
+        return ratio
+
+    def setup_method_monotonic(self):
+        print('Setting up monotonic search parameters.')
+
+        s = 'Offset (eV) (default: 5): '
+        offset = float(input(s) or 5)
+
+        s = 'Number of shots for the IPMs average (default: 50): '
+        n = int(input(s) or 50)
+
+        s = 'IPM ratio threshold (default: ff): '
+        ratio_th = float(input(s) or 2.5)
+
+        s = 'Energy increment (eV) (default: 0.5): '
+        step_size = float(input(s) or 0.5)
+
+        s = 'Maximum number of optimization steps (default: 10): '
+        max_step = int(input(s) or 10)
+
+        self.optimization_args = {
+            'energy_offset' : offset,
+            'n_average' : n,
+            'ipm_ratio_threshold' : ratio_th,
+            'energy_step_size' : step_size,
+            'max_step' : max_step
+        }
+        self.method = 'monotonic'
+        return
+
+    def move(self, new_pos , *args, **kwargs):
+        if self.method == 'monotonic':
+            self.monotonic_increase_search(new_pos, **self.optimization_args)
         return
 
 
