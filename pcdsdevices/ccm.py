@@ -930,7 +930,7 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         return ratio
 
     def setup_method_monotonic(self):
-        """ Helps the user throught the setup of the parameters for he monotonic
+        """ Helps the user throught the setup of the parameters for the monotonic
         search algorithm. This should be handled by someone who knows what they
         are doing.
         """
@@ -951,7 +951,7 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         s = 'Maximum number of optimization steps (default: 10): '
         max_step = int(input(s) or 10)
 
-        self.optimization_args = {
+        self.optimization_args['monotonic'] = {
             'energy_offset' : offset,
             'n_average' : n,
             'ipm_ratio_threshold' : ratio_th,
@@ -962,13 +962,7 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         return
 
     def move(self, new_pos , *args, **kwargs):
-        if self.optimization_args is None:
-            print("Please setup an optimization method first.\
-                  Ex: <class>.setup_method_monotonic()")
         status = self.method_map[self.method](new_pos, self.optimization_args[self.method])
-
-        # if self.method == 'monotonic':
-        #     status = self.monotonic_increase_search(new_pos, **self.optimization_args)
         return status
 
 
