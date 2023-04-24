@@ -6,11 +6,12 @@ from collections import namedtuple
 
 import numpy as np
 from lightpath import LightpathState
+from ophyd import OphydObject
 from ophyd.device import Component as Cpt
 from ophyd.device import Device
 from ophyd.device import FormattedComponent as FCpt
 from ophyd.signal import EpicsSignal, EpicsSignalRO, Signal
-from ophyd.status import MoveStatus
+from ophyd.status import MoveStatus, Status
 
 from .beam_stats import BeamEnergyRequest
 from .device import GroupDevice
@@ -820,7 +821,7 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         self,
         prefix: str,
         ipms_prefix: str = None,
-        ipm_idx: dict = {'upstream': 0, 'downstream': 1},
+        ipm_idx: typing.Optional[dict] = None,
         hutch: typing.Optional[str] = None,
         **kwargs
     ):
@@ -839,19 +840,31 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         UCpt.collect_prefixes(self, prefixes)
         super().__init__(prefix, **kwargs)
 
-        self.ipm_idx = ipm_idx
+        self.ipm_idx = ipm_idx or {'upstream': 0, 'downstream': 1}
 
+        # Optimization methods and arguments
+        # See function definitions for details on arguments
         self.method = 'monotonic'
-        self.optimization_args = None
+        self.method_map = {
+            'monotonic' : self.monotonic_increase_search,
+        }
+        self.optimization_args = {}
+        self.optimization_args['monotonic'] = {
+            'offset': 5,
+            'n_average': 50,
+            'threshold_ratio': 2.5,
+            'stepsize': 0.5,
+            'max_step': 10
+        }
 
     def monotonic_increase_search(
         self,
-        setpoint,
-        offset,
-        n_average,
-        threshold_ratio,
-        stepsize,
-        max_steps
+        setpoint: float,
+        offset: float,
+        n_average: int,
+        threshold_ratio: float,
+        stepsize: float,
+        max_steps: int
     ):
         """
         Simple monotonic search for the CCM energy position:
@@ -879,7 +892,7 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         """
         self.self_seed.move(setpoint)
         # move slightly below the setpoint
-        super().move(setpoint-offset, wait=True)
+        status = super().move(setpoint-offset, wait=True)
         # wait for self-seed to settle
         time.sleep(1)
 
@@ -889,14 +902,25 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
             if ipm_ratio > self.ipm_ratio_threshold:
                 print('Optimization complete!\n')
                 break
-            super().mvr(stepsize, wait=True)
-        return
+            status = super().mvr(stepsize, wait=True)
+        return status
 
-    def get_ipms_intensities(self, nn, sleep=0.01):
+    def get_ipms_intensities(self, n_shots=10):
         intensities = []
-        for ii in range(nn):
-            intensities.append(self.ipms.get())
-            time.sleep(sleep)
+        status = Status(timeout=5)
+
+        def cb(*args, obj: OphydObject, sub_type: str, **kwargs) -> None:
+            intensities.append(obj.value)
+            if len(intensities) >= n_shots:
+                status.set_finished()
+
+        cid = self.ipms.subscribe(cb)
+        status.wait(5)
+        self.ipms.unsubscribe(cid)
+
+        # for ii in range(nn):
+        #     intensities.append(self.ipms.get())
+        #     time.sleep(sleep)
         return np.asarray(intensities)
 
     def ipm_ratio(self, intensities):
@@ -941,9 +965,11 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         if self.optimization_args is None:
             print("Please setup an optimization method first.\
                   Ex: <class>.setup_method_monotonic()")
-        if self.method == 'monotonic':
-            self.monotonic_increase_search(new_pos, **self.optimization_args)
-        return
+        status = self.method_map[self.method](new_pos, self.optimization_args[self.method])
+
+        # if self.method == 'monotonic':
+        #     status = self.monotonic_increase_search(new_pos, **self.optimization_args)
+        return status
 
 
 class CCMX(SyncAxis):
