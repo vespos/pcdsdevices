@@ -963,7 +963,7 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
         return
 
     def move(self, new_pos , *args, **kwargs):
-        status = self.method_map[self.method](new_pos, self.optimization_args[self.method])
+        status = self.method_map[self.method](new_pos, **self.optimization_args[self.method])
         return status
 
 
