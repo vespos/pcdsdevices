@@ -902,7 +902,8 @@ class CCMEnergyWithSelfSeed(CCMEnergy):
             if ipm_ratio > self.ipm_ratio_threshold:
                 print('Optimization complete!\n')
                 break
-            status = super().mvr(stepsize, wait=True)
+            new_pos = self.energy.get().readback + stepsize
+            status = super().move(new_pos, wait=True)
         return status
 
     def get_ipms_intensities(self, n_shots=10):
