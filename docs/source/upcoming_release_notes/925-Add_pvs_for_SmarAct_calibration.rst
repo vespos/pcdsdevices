@@ -1,4 +1,4 @@
-1120 Qmini updates for modified IOC
+925 Add pvs for SmarAct calibration
 #################
 
 API Changes
@@ -11,8 +11,8 @@ Features
 
 Device Updates
 --------------
-- QminiSpectrometer: Added some new PVs and modified others related to recent
-                     IOC changes. Embedded UI was updated to reflect this.
+- SmarAct: Add signals for performing axis calibration and checking
+           calibration status.
 
 New Devices
 -----------
@@ -28,4 +28,4 @@ Maintenance
 
 Contributors
 ------------
-- tjohnson
+- slactjohnson
