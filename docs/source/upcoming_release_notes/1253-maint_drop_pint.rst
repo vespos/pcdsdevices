@@ -1,8 +1,8 @@
-925 Add pvs for SmarAct calibration
+1253 maint_drop_pint
 #################
 
-API Changes
------------
+API Breaks
+----------
 - N/A
 
 Features
@@ -11,8 +11,7 @@ Features
 
 Device Updates
 --------------
-- SmarAct: Add signals for performing axis calibration and checking
-           calibration status.
+- N/A
 
 New Devices
 -----------
@@ -24,8 +23,10 @@ Bugfixes
 
 Maintenance
 -----------
-- N/A
+- Use sympy instead of pint for unit conversions for simpler
+  maintainability.
+- Various CI tweaks due to numpy 2.0's chaos.
 
 Contributors
 ------------
-- slactjohnson
+- zllentz

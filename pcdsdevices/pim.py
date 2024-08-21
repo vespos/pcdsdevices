@@ -20,14 +20,16 @@ from .areadetector.detectors import (PCDSAreaDetectorEmbedded,
                                      PCDSAreaDetectorTyphosTrigger)
 from .device import GroupDevice
 from .device import UpdateComponent as UpCpt
+from .digital_signals import J120K
 from .epics_motor import IMS, BeckhoffAxisNoOffset
 from .inout import InOutRecordPositioner
 from .interface import BaseInterface, LightpathInOutCptMixin
+from .keithley import IM3L0_K2700
 from .pmps import TwinCATStatePMPS
 from .sensors import TwinCATThermocouple
 from .signal import PytmcSignal
 from .state import StatePositioner
-from .utils import get_status_float, get_status_value
+from .utils import get_status_float, get_status_value, reorder_components
 from .variety import set_metadata
 
 logger = logging.getLogger(__name__)
@@ -540,6 +542,8 @@ class XPIM(LCLS2ImagerBase):
     filter_wheel = Cpt(XPIMFilterWheel, ':MFW', kind='config',
                        doc='Optical filter wheel in front of the camera '
                            'to prevent saturation.')
+    flow_switch = Cpt(J120K, '', kind='normal',
+                      doc='Device that indicates nominal PCW Flow Rate.')
 
     set_metadata(zoom_lock, dict(variety='command-enum'))
     set_metadata(focus_lock, dict(variety='command-enum'))
@@ -556,7 +560,23 @@ class IM2K0(LCLS2ImagerBase):
     # XPIM illuminator
     led = Cpt(XPIMLED, ':CIL', kind='config',
               doc='LED for viewing the reticle.')
+    flow_switch = Cpt(J120K, '', kind='normal',
+                      doc='Device that indicates nominal PCW Flow Rate.')
     # Nothing else! No power meter, no zoom/focus, no filter wheel...
+
+
+@reorder_components(
+    end_with=['k2700', 'power_meter', 'yag_thermocouple', 'led']
+)
+class IM3L0(PPM):
+    """
+    One-off subclass of PPM to include this device's Keithley 2700
+
+    Includes a Keithley 2700 digital multimeter on top of the PPM class, mainly
+    so it shows up on this device's detailed screen.
+    """
+    k2700 = Cpt(IM3L0_K2700, ':SPM:K2700',
+                doc='Digital multimeter to get power readouts for this device.')
 
 
 class PPMCOOL(PPM):
@@ -565,3 +585,11 @@ class PPMCOOL(PPM):
     """
     flow_meter = Cpt(FDQ, '', kind='normal',
                      doc='Device that measures PCW Flow Rate.')
+
+
+class PPMCoolSwitch(PPM):
+    """
+    L2SI's Power and Profile Monitor design with cooling switch.
+    """
+    flow_switch = Cpt(J120K, '', kind='normal',
+                      doc='Device that indicates nominal PCW Flow Rate.')

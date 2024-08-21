@@ -1,8 +1,8 @@
-1143 optics-notepad
+1247 optics-cooling
 #################
 
-API Changes
------------
+API Breaks
+----------
 - N/A
 
 Features
@@ -11,11 +11,11 @@ Features
 
 Device Updates
 --------------
-- Added new PVS to ``OpticsPitchNotepad`` for storing the MR2L3 channel-cut monochromator (CCM) pitch position setpoints for its two coatings.
+- `FFMirrorZ` updated to read out flow sensors for MR4K4 and MR5K4.
 
 New Devices
 -----------
-- N/A
+- `XOffsetMirrorStateCoolNoBend` is added to support MR1K4.
 
 Bugfixes
 --------

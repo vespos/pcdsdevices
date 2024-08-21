@@ -1,8 +1,8 @@
-1154 DOC: add TIXEL Manipulaotr Motors to Magenetic Bottle
+1261 Fix mis-match of LS3 and LS4
 #################
 
-API Changes
------------
+API Breaks
+----------
 - N/A
 
 Features
@@ -11,7 +11,7 @@ Features
 
 Device Updates
 --------------
-- Added TIXEL Manipulator motors to LAMPMagneticBottle
+- N/A
 
 New Devices
 -----------
@@ -19,7 +19,7 @@ New Devices
 
 Bugfixes
 --------
-- N/A
+- BtpsState: Fix mis-match of LS3 and LS4 PVs.
 
 Maintenance
 -----------
@@ -27,4 +27,4 @@ Maintenance
 
 Contributors
 ------------
-- jozamudi
+- slactjohnson

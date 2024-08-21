@@ -1,17 +1,17 @@
-1145 enh_ptmplc_status
+4500 Add motor class for MEC hexapod axis
 #################
 
-API Changes
------------
+API Breaks
+----------
 - N/A
 
 Features
 --------
-- N/A
+- Added PI_M824 motor class for MEC hexapod motors
 
 Device Updates
 --------------
-- Add missing ``pump_state`` (``:STATE_RBV``) signal to ``PTMPLC``.
+- N/A
 
 New Devices
 -----------
@@ -27,4 +27,4 @@ Maintenance
 
 Contributors
 ------------
-- zllentz
+- jozamudi
